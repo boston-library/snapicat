@@ -10,7 +10,7 @@ import {
 
 const API_CODE = import.meta.env.VITE_API_CODE
 
-	const codeParam = API_CODE ? `?code=${API_CODE}` : ''
+const codeParam = API_CODE ? `?code=${API_CODE}` : ''
 
 export const useSearchBooks = () => {
 	const api = useApi()
