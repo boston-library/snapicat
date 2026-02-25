@@ -15,13 +15,9 @@ export const useGenerateXML = () => {
 
 	return useMutation<string, Error, GenerateXMLRequest>({
 		mutationFn: async (data) => {
-			const response = await api.post<string>(
-				`/generate_xml${codeParam}`,
-				data,
-				{
-					responseType: 'text',
-				},
-			)
+			const response = await api.post<string>(`/generate_xml${codeParam}`, data, {
+				responseType: 'text',
+			})
 			return response.data
 		},
 	})

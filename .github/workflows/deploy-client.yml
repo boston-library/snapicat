@@ -9,11 +9,11 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'snapicat-develop'
+        default: 'client-develop'
         type: choice
         options:
-          - snapicat-develop
-          - snapicat-production
+          - client-develop
+          - client-production
 
 jobs:
   deploy:
@@ -22,7 +22,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.event.pull_request.base.ref == 'main' && 'snapicat-production' || 'snapicat-develop') }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.event.pull_request.base.ref == 'main' && 'client-production' || 'client-develop') }}
     env:
       NODE_VERSION: 20.x
 

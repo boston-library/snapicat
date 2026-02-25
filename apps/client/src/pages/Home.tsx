@@ -1139,7 +1139,6 @@ const Home = () => {
 					orderby={orderby}
 					setOrderby={setOrderby}
 					orderByOptions={orderByOptions}
-					targetTable='adv_unprocessed'
 				/>
 			)}
 
