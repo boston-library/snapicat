@@ -1,0 +1,76 @@
+name: Deploy snAPIcat OCLC Azure Function App
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  NODE_VERSION: 20.x
+  PYTHON_VERSION: 3.11
+  PROJECT_ROOT: apps/server #
+  ARTIFACT_NAME: drop
+
+jobs:
+  build:
+    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    runs-on: ubuntu-latest
+    name: Build Function App
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ${{ env.PROJECT_ROOT }}/requirements.txt
+          pip install --target="${{ env.PROJECT_ROOT }}/.python_packages/lib/site-packages" -r ${{ env.PROJECT_ROOT }}/requirements.txt
+
+      - name: Archive function app
+        run: |
+          cd ${{ env.PROJECT_ROOT }}
+          zip -r functionapp.zip . -x '*.git*' '*.vscode*' '__pycache__/*' '*.pyc' 'local.settings.json'
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: apps/server/functionapp.zip #
+
+  deploy:
+    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy to Azure Function App
+    environment: ${{ github.event.pull_request.base.ref == 'main' && 'production' || 'develop' }}
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./artifacts
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_GITHUB_APP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTION_APP_NAME }}
+          package: ./artifacts/functionapp.zip

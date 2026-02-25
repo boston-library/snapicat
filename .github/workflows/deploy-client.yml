@@ -1,0 +1,67 @@
+name: Deploy snAPIcat OCLC client app to Azure Blob Static Website
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: ${{ github.event.pull_request.base.ref == 'main' && 'production' || 'develop' }}
+    env:
+      NODE_VERSION: 20.x
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: yarn install
+        working-directory: apps/client
+
+      - name: Build React app
+        run: yarn build
+        working-directory: apps/client
+        env:
+          VITE_APP_TITLE: ${{ vars.APP_TITLE }}
+          VITE_APP_NAME: ${{ vars.APP_NAME }}
+          VITE_BATCH_SIZE: ${{ vars.BATCH_SIZE }}
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          VITE_API_CODE: ${{ secrets.API_CODE }}
+          VITE_AZURE_FE_APP_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          VITE_AZURE_FE_APP_CLIENT_ID: ${{ vars.AZURE_FE_APP_CLIENT_ID }}
+          VITE_AZURE_BE_APP_CLIENT_ID: ${{ vars.AZURE_BE_APP_CLIENT_ID }}
+
+      - name: Login to Azure using OIDC federated identity
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_GITHUB_APP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Blob Static Website
+        run: |
+          az storage blob delete-batch \
+            --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+            --source '$web' \
+            --auth-mode login
+
+          az storage blob upload-batch \
+            --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+            --source apps/client/dist \
+            --destination '$web' \
+            --pattern "*" \
+            --overwrite \
+            --auth-mode login

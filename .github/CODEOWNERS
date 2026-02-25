@@ -1,0 +1,3 @@
+# Code owners — * = entire repo. Branch protection enforces who must approve.
+# See docs/deployment.md for full explanation.
+* @KeithGillette @bts-ssingh
