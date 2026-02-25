@@ -1,0 +1,25 @@
+{
+	"version": "2.0",
+	"logging": {
+		"applicationInsights": {
+			"samplingSettings": {
+				"isEnabled": false,
+				"excludedTypes": "Request"
+			},
+			"enableLiveMetrics": true,
+			"enableDependencyTracking": true,
+			"enablePerformanceCountersCollection": true
+		},
+		"logLevel": {
+			"default": "Information",
+			"Host.Results": "Error",
+			"Function": "Information",
+			"Host.Aggregator": "Information"
+		}
+	},
+	"extensionBundle": {
+		"id": "Microsoft.Azure.Functions.ExtensionBundle",
+		"version": "[4.*, 5.0.0)"
+	},
+	"functionTimeout": "00:30:00"
+}
