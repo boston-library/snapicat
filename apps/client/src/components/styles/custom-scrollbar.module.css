@@ -1,0 +1,88 @@
+/* Enhanced cross-browser custom scrollbar for .customScrollbar */
+.customScrollbar {
+	/* Firefox */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(100, 116, 139, 0.8) transparent;
+
+	/* Force scrollbars to always be visible on macOS */
+	overflow: auto !important;
+}
+
+/* WebKit browsers (Chrome, Edge, Safari) */
+.customScrollbar::-webkit-scrollbar {
+	height: 12px;
+	width: 12px;
+}
+
+.customScrollbar::-webkit-scrollbar-track {
+	background: rgba(0, 0, 0, 0.05);
+	border-radius: 6px;
+}
+
+.customScrollbar::-webkit-scrollbar-thumb {
+	background-color: rgba(100, 116, 139, 0.6);
+	border-radius: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	background-clip: padding-box;
+	min-height: 20px;
+}
+
+.customScrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(100, 116, 139, 0.8);
+}
+
+.customScrollbar::-webkit-scrollbar-thumb:active {
+	background-color: rgba(100, 116, 139, 0.9);
+}
+
+/* Remove arrow buttons and corner in WebKit-based browsers */
+.customScrollbar::-webkit-scrollbar-button,
+.customScrollbar::-webkit-scrollbar-button:vertical,
+.customScrollbar::-webkit-scrollbar-button:horizontal {
+	display: none;
+	width: 0;
+	height: 0;
+}
+
+.customScrollbar::-webkit-scrollbar-corner {
+	background: transparent !important;
+}
+
+/* macOS-specific enhancements */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+	.customScrollbar {
+		/* Force scrollbars to be always visible on macOS */
+		min-height: 12px;
+		overflow: auto !important;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.customScrollbar::-webkit-scrollbar {
+		/* Make scrollbars more prominent on macOS */
+		height: 14px;
+		width: 14px;
+	}
+
+	.customScrollbar::-webkit-scrollbar-thumb {
+		/* Enhanced visibility for macOS */
+		background-color: rgba(100, 116, 139, 0.7);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+	.customScrollbar::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.customScrollbar::-webkit-scrollbar-thumb {
+		background-color: rgba(156, 163, 175, 0.6);
+		border: 1px solid rgba(0, 0, 0, 0.2);
+	}
+
+	.customScrollbar::-webkit-scrollbar-thumb:hover {
+		background-color: rgba(156, 163, 175, 0.8);
+	}
+}

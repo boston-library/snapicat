@@ -1,0 +1,146 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+
+	color-scheme: light dark;
+	color: rgba(255, 255, 255, 0.87);
+	background-color: #242424;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	--radius: 0.625rem;
+	--background: #f8fafc;
+	--foreground: #1e293b;
+	--card: #fff;
+	--card-foreground: #1e293b;
+	--popover: #fff;
+	--popover-foreground: #1e293b;
+	--primary: rgba(50, 184, 198, 1);
+	--primary-hover: rgba(45, 166, 178, 1);
+	--primary-active: rgba(41, 150, 161, 1);
+	--primary-foreground: #fff;
+	--secondary: #e0f7fa;
+	--secondary-foreground: #1e293b;
+	--muted: #f1f5f9;
+	--muted-foreground: #64748b;
+	--accent: #e0f2f1;
+	--accent-foreground: #1e293b;
+	--destructive: #ef4444;
+	--warning: #eed202;
+	--border: #cbd5e1;
+	--input: #cbd5e1;
+	--ring: rgba(50, 184, 198, 0.5);
+	--chart-1: #34d399;
+	--chart-2: #38bdf8;
+	--chart-3: #818cf8;
+	--chart-4: #fbbf24;
+	--chart-5: #f472b6;
+	--sidebar: #fff;
+	--sidebar-foreground: #1e293b;
+	--sidebar-primary: rgba(50, 184, 198, 1);
+	--sidebar-primary-foreground: #fff;
+	--sidebar-accent: #e0f7fa;
+	--sidebar-accent-foreground: #1e293b;
+	--sidebar-border: #cbd5e1;
+	--sidebar-ring: rgba(50, 184, 198, 0.5);
+}
+
+body {
+	margin-block: auto;
+	min-width: 320px;
+	min-height: 100vh;
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-warning: var(--warning);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+.dark {
+	--background: #1e293b;
+	--foreground: #f8fafc;
+	--card: #22303c;
+	--card-foreground: #f8fafc;
+	--popover: #22303c;
+	--popover-foreground: #f8fafc;
+	--primary: rgba(50, 184, 198, 1);
+	--primary-hover: rgba(45, 166, 178, 1);
+	--primary-active: rgba(41, 150, 161, 1);
+	--primary-foreground: #fff;
+	--secondary: #22303c;
+	--secondary-foreground: #f8fafc;
+	--muted: #334155;
+	--muted-foreground: #cbd5e1;
+	--accent: #22303c;
+	--accent-foreground: #f8fafc;
+	--destructive: #ef4444;
+	--warning: #eed202;
+	--border: #334155;
+	--input: #334155;
+	--ring: rgba(50, 184, 198, 0.5);
+	--chart-1: #34d399;
+	--chart-2: #38bdf8;
+	--chart-3: #818cf8;
+	--chart-4: #fbbf24;
+	--chart-5: #f472b6;
+	--sidebar: #22303c;
+	--sidebar-foreground: #f8fafc;
+	--sidebar-primary: rgba(50, 184, 198, 1);
+	--sidebar-primary-foreground: #fff;
+	--sidebar-accent: #334155;
+	--sidebar-accent-foreground: #f8fafc;
+	--sidebar-border: #334155;
+	--sidebar-ring: rgba(50, 184, 198, 0.5);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+		@apply selection:bg-ring;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
