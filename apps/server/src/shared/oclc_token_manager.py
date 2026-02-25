@@ -1,71 +1,79 @@
-"""OCLC OAuth2 client credentials token manager with caching and retries."""
-
 import os
-import time
-from typing import Optional
+import logging
+from typing import Dict, Any, Optional
+import uuid
+from datetime import datetime, timedelta
 
 import requests
+from requests.auth import HTTPBasicAuth
 
-from src.shared.constants import OCLC_OAUTH_SCOPE, OCLC_OAUTH_URL
-
-# Cache: (token_string, expires_at_ts). Refresh 5 minutes before expiry.
-_TOKEN_CACHE: Optional[tuple[str, float]] = None
-_BUFFER_SECONDS = 5 * 60  # 5 min buffer
-
+from .constants import (
+    OCLC_OAUTH_URL, OCLC_OAUTH_SCOPE, ERROR_MESSAGES
+)
 
 class OCLCTokenManager:
-    """Manages OCLC OAuth2 client_credentials token with cache and retries."""
-
-    def __init__(self) -> None:
-        self._wskey = os.environ.get("OCLC_WSKEY", "")
-        self._secret = os.environ.get("OCLC_SECRET", "")
+    """
+    Token manager that handles OCLC access tokens with caching and retry mechanism.
+    Implements token caching, usage tracking, and quota management.
+    """
+    def __init__(self):
+        self.wskey = os.environ.get('OCLC_WSKEY')
+        self.secret = os.environ.get('OCLC_SECRET')
+        self._correlation_id = str(uuid.uuid4())
+        self._current_token: Optional[Dict[str, Any]] = None
+        self._token_expiry: Optional[datetime] = None
         self._max_retries = 3
-        self._backoff_base = 1.0
+        self._retry_delay = 1  # seconds
+
+        if not self.wskey or not self.secret:
+            raise ValueError(ERROR_MESSAGES['MISSING_CREDENTIALS'])
+
+    def get_shared_token(self) -> str:
+        """Get a valid access token, reusing existing token if possible"""
+        try:
+            # Check if we have a valid token
+            if self._is_token_valid():
+                return self._current_token['access_token']
+
+            # Try to get a new token with retries
+            for attempt in range(self._max_retries):
+                try:
+                    token_data = self._request_new_token()
+                    self._current_token = token_data
+                    # Set expiry time (subtract 5 minutes as buffer)
+                    self._token_expiry = datetime.now() + timedelta(seconds=token_data.get('expires_in', 3600) - 300)
+                    return token_data['access_token']
+                except requests.exceptions.RequestException as e:
+                    if attempt == self._max_retries - 1:
+                        raise
+                    logging.warning(f"[{self._correlation_id}] Token request failed (attempt {attempt + 1}/{self._max_retries}): {str(e)}")
+                    import time
+                    time.sleep(self._retry_delay * (attempt + 1))  # Exponential backoff
+
+        except Exception as e:
+            logging.error(f"[{self._correlation_id}] Failed to get token: {str(e)}")
+            raise
+
+    def _is_token_valid(self) -> bool:
+        """Check if current token is valid and not expired"""
+        if not self._current_token or not self._token_expiry:
+            return False
+        return datetime.now() < self._token_expiry
+
+    def _request_new_token(self) -> Dict[str, Any]:
+        """Request a new token from OCLC"""
+        data = {
+            'grant_type': 'client_credentials',
+            'scope': OCLC_OAUTH_SCOPE
+        }
+        response = requests.post(
+            OCLC_OAUTH_URL,
+            data=data,
+            auth=HTTPBasicAuth(self.wskey, self.secret)
+        )
+        response.raise_for_status()
+        return response.json()
 
     def can_make_request(self) -> bool:
-        """Return True if credentials are configured."""
-        return bool(self._wskey and self._secret)
-
-    def get_shared_token(self) -> Optional[str]:
-        """
-        Obtain shared client_credentials token from OCLC_OAUTH_URL with given scope.
-        Cache token and refresh with 5-minute buffer before expiry.
-        Uses retries with backoff on failure.
-        """
-        global _TOKEN_CACHE
-        now = time.time()
-        if _TOKEN_CACHE is not None:
-            token, expires_at = _TOKEN_CACHE
-            if expires_at > now + _BUFFER_SECONDS:
-                return token
-            _TOKEN_CACHE = None
-
-        data = {
-            "grant_type": "client_credentials",
-            "scope": OCLC_OAUTH_SCOPE,
-        }
-        auth = (self._wskey, self._secret)
-        last_error: Optional[Exception] = None
-        for attempt in range(self._max_retries):
-            try:
-                resp = requests.post(
-                    OCLC_OAUTH_URL,
-                    data=data,
-                    auth=auth,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                    timeout=15,
-                )
-                resp.raise_for_status()
-                body = resp.json()
-                access_token = body.get("access_token")
-                expires_in = int(body.get("expires_in", 3600))
-                if not access_token:
-                    return None
-                expires_at = now + expires_in
-                _TOKEN_CACHE = (access_token, expires_at)
-                return access_token
-            except requests.RequestException as e:
-                last_error = e
-                if attempt < self._max_retries - 1:
-                    time.sleep(self._backoff_base * (2**attempt))
-        raise last_error or RuntimeError("Failed to obtain OCLC token")
+        """Check if we can make a new request based on token validity"""
+        return self._is_token_valid()

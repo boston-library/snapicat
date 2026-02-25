@@ -1,67 +1,127 @@
-"""Azure AD Bearer token validation using JWKS and PyJWT."""
-
+from azure.functions import HttpRequest
+import logging
 import os
-from typing import Any, Optional
-
-import jwt
+import json
+from functools import lru_cache
+import jwt.algorithms
 import requests
+import jwt
+from jwt.algorithms import RSAAlgorithm
+import uuid
+from typing import Optional, Dict, Any
 
-from src.shared.constants import (
-    AZURE_AD_DISCOVERY_PATH,
-    AZURE_AD_ISSUER_BASE,
+from .constants import (
+    AZURE_AD_ISSUER_BASE, AZURE_AD_DISCOVERY_PATH
 )
 
-# In-memory cache for PyJWKClient (key: jwks_uri)
-_jwks_client_cache: dict[str, jwt.PyJWKClient] = {}
+class TokenValidationError(Exception):
+    """Custom exception for token validation errors"""
+    pass
 
+@lru_cache(maxsize=1)
+def get_jwks() -> Optional[Dict[str, Any]]:
+    """Fetch JWKS from Azure AD and cache it"""
+    tenant_id = os.environ.get("AZURE_TENANT_ID")
+    if not tenant_id:
+        raise TokenValidationError("AZURE_TENANT_ID environment variable not set")
 
-def _get_jwks_uri(tenant_id: str) -> str:
-    """Build OpenID discovery URL and return jwks_uri from the document."""
-    base = AZURE_AD_ISSUER_BASE.rstrip("/")
-    discovery_url = f"{base}/{tenant_id}/v2.0{AZURE_AD_DISCOVERY_PATH}"
-    resp = requests.get(discovery_url, timeout=10)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["jwks_uri"]
+    jwks_uri = f"{AZURE_AD_ISSUER_BASE}/{tenant_id}{AZURE_AD_DISCOVERY_PATH}"
+    correlation_id = str(uuid.uuid4())
 
+    try:
+        response = requests.get(jwks_uri, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"[{correlation_id}] Failed to fetch JWKS: {str(e)}")
+        raise TokenValidationError(f"Failed to fetch JWKS: {str(e)}")
+    except Exception as e:
+        logging.error(f"[{correlation_id}] Unexpected error fetching JWKS: {str(e)}")
+        raise TokenValidationError(f"Unexpected error fetching JWKS: {str(e)}")
 
-def _get_jwks_client(jwks_uri: str) -> jwt.PyJWKClient:
-    """Get or create cached PyJWKClient for the given jwks_uri."""
-    if jwks_uri not in _jwks_client_cache:
-        _jwks_client_cache[jwks_uri] = jwt.PyJWKClient(jwks_uri)
-    return _jwks_client_cache[jwks_uri]
+def get_rsa_public_key(token: str) -> Optional[jwt.algorithms.RSAAlgorithm]:
+    """Get RSA key from JWKS based on token header"""
+    correlation_id = str(uuid.uuid4())
+    try:
+        jwks = get_jwks()
+        if not jwks or 'keys' not in jwks:
+            logging.error(f"[{correlation_id}] JWKS is empty or does not contain keys")
+            raise TokenValidationError("Invalid JWKS response")
 
+        unverified_header = jwt.get_unverified_header(token)
+        kid = unverified_header.get('kid')
+        if not kid:
+            logging.error(f"[{correlation_id}] Token header missing 'kid'")
+            raise TokenValidationError("Invalid token header")
 
-async def validate_token(req) -> Optional[dict[str, Any]]:
-    """
-    Read Authorization Bearer from the request, fetch JWKS from Azure AD,
-    validate with PyJWT (audience, issuer, expiry) and return decoded payload or None.
-    """
-    auth = req.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        return None
-    token = auth[7:].strip()
-    if not token:
-        return None
+        # Find the key with matching kid
+        for key in jwks['keys']:
+            if key['kid'] == kid:
+                return RSAAlgorithm.from_jwk(json.dumps(key))
+
+        logging.error(f"[{correlation_id}] No matching key found for kid: {kid}")
+        raise TokenValidationError("No matching key found")
+    except Exception as e:
+        logging.error(f"[{correlation_id}] Error extracting RSA public key: {str(e)}")
+        raise TokenValidationError(f"Error extracting RSA public key: {str(e)}")
+
+async def validate_token(req: HttpRequest) -> Optional[Dict[str, Any]]:
+    """Validate JWT token from request header"""
+    correlation_id = str(uuid.uuid4())
+    logging.info(f"[{correlation_id}] Validating token")
 
     tenant_id = os.environ.get("AZURE_TENANT_ID")
     client_id = os.environ.get("AZURE_CLIENT_ID")
+
     if not tenant_id or not client_id:
+        logging.error(f"[{correlation_id}] Missing required Azure AD environment variables")
         return None
 
-    issuer = f"{AZURE_AD_ISSUER_BASE.rstrip('/')}/{tenant_id}/v2.0"
+    # Check for the presence of the 'Authorization' header (case-insensitive)
+    auth_header = None
+    for header_name, header_value in req.headers.items():
+        if header_name.lower() == 'authorization':
+            auth_header = header_value
+            break
+
+    if not auth_header or not auth_header.startswith('Bearer '):
+        logging.warning(f"[{correlation_id}] Missing or invalid Authorization header")
+        return None
+
+    # Extract the token from the header
+    token = auth_header.split(' ')[1]
+
     try:
-        jwks_uri = _get_jwks_uri(tenant_id)
-        jwks_client = _get_jwks_client(jwks_uri)
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
+        # Get the RSA public key from JWKS
+        rsa_public_key = get_rsa_public_key(token)
+        if not rsa_public_key:
+            logging.error(f"[{correlation_id}] Failed to get RSA public key")
+            return None
+
+        # Decode and verify the JWT token
+        decoded_token = jwt.decode(
             token,
-            signing_key.key,
-            algorithms=["RS256"],
+            rsa_public_key,
+            algorithms=['RS256'],
             audience=client_id,
-            issuer=issuer,
-            options={"verify_exp": True, "verify_aud": True, "verify_iss": True},
+            issuer=f"{AZURE_AD_ISSUER_BASE}/{tenant_id}/v2.0",
+            options={
+                'verify_aud': True,
+                'verify_iss': True,
+                'verify_exp': True,
+                'verify_nbf': True
+            }
         )
-        return payload
-    except Exception:
+
+        logging.info(f"[{correlation_id}] Token validated successfully")
+        return decoded_token
+
+    except jwt.ExpiredSignatureError:
+        logging.warning(f"[{correlation_id}] Token has expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logging.error(f"[{correlation_id}] Invalid token: {str(e)}")
+        return None
+    except Exception as e:
+        logging.error(f"[{correlation_id}] Unexpected error during token validation: {str(e)}")
         return None

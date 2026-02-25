@@ -1,35 +1,42 @@
-"""Shared constants for OCLC and Azure AD."""
+from typing import Dict
+from datetime import datetime
 
-OCLC_API_BASE_URL = "https://worldcat.org"
+# API Configuration
+OCLC_API_BASE_URL = "https://metadata.api.oclc.org/worldcat"
 OCLC_OAUTH_URL = "https://oauth.oclc.org/token"
-OCLC_OAUTH_SCOPE = "WorldCatMetadataAPI"
+OCLC_OAUTH_SCOPE = "WorldCatMetadataAPI:view_brief_bib WorldCatMetadataAPI:manage_bibs"
+
+# Azure Configuration
+AZURE_AD_ISSUER_BASE = "https://login.microsoftonline.com"
+AZURE_AD_DISCOVERY_PATH = "/discovery/v2.0/keys"
+
+# Search Configuration
 BATCH_SIZE = 100
 
-AZURE_AD_ISSUER_BASE = "https://login.microsoftonline.com"
-AZURE_AD_DISCOVERY_PATH = "/.well-known/openid-configuration"
-
-SEARCH_FIELD_MAPPING = {
-    "ti": "ti",
-    "au": "au",
-    "se": "se",
-    "pu": "pu",
-    "pb": "pb",
-    "yr": "yr",
-    "su": "su",
-    "is": "is",
-    "bn": "bn",
-    "kw": "kw",
+# Field Mappings
+SEARCH_FIELD_MAPPING: Dict[str, str] = {
+    'title': 'ti',
+    'author': 'au',
+    'publisher': 'pb',
+    'isbn': 'bn',
+    'issn': 'in',
+    'subject': 'su',
+    'keyword': 'kw',
+    'year': 'yr'
 }
 
+# HTTP Headers
 DEFAULT_HEADERS = {
-    "Accept": "application/json",
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json'
 }
 
+# Error Messages
 ERROR_MESSAGES = {
-    "missing_auth": "Authorization header is missing or invalid.",
-    "invalid_token": "Invalid or expired token.",
-    "invalid_body": "Invalid request body.",
-    "oclc_error": "OCLC service error.",
-    "server_error": "An internal server error occurred.",
+    'UNAUTHORIZED': 'Unauthorized access',
+    'INVALID_TOKEN': 'Invalid or expired token',
+    'MISSING_CREDENTIALS': 'OCLC credentials not found in environment variables',
+    'API_ERROR': 'OCLC API request failed',
+    'VALIDATION_ERROR': 'Invalid request data',
+    'NO_RESULTS': 'No records found for the provided criteria',
+    'RATE_LIMIT_EXCEEDED': f'Rate limit exceeded for today - {datetime.today().isoformat()}',
 }
