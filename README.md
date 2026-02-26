@@ -16,7 +16,7 @@ Authentication is **Azure AD (Microsoft)** via MSAL; the backend validates JWT a
 | Layer   | Tech |
 |--------|------|
 | Client | React 19, Vite 7, TypeScript, TanStack Query, MSAL (Azure AD), Dexie (IndexedDB), Tailwind CSS, shadcn-style UI |
-| Server | Python 3.11, Azure Functions (or FastAPI standalone), OCLC API (OAuth + search/bibs) |
+| Server | Python 3.12, Azure Functions (or FastAPI standalone), OCLC API (OAuth + search/bibs) |
 
 ## Repository structure
 
@@ -32,7 +32,7 @@ No NX or Turborepo; client and server are independent.
 ### Prerequisites
 
 - **Node.js** 20.x and **Yarn** (for the client)
-- **Python 3.11** (for the server; avoid 3.13+ due to grpcio)
+- **Python 3.12** (for the server; do not use 3.10, 3.11, or 3.13+ due to grpcio compatibility)
 - **OCLC WSKey + secret** and **Azure AD** app registration (tenant ID, client IDs for frontend and backend)
 
 ### 1. Clone and env
@@ -63,7 +63,7 @@ App runs at **http://localhost:5174** (or the port in `vite.config`). Point `VIT
 
 ```bash
 cd apps/server
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 func start --port 8080 --cors http://localhost:5174
