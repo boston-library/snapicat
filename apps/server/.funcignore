@@ -3,6 +3,8 @@
 .git*
 .vscode
 local.settings.json
+local.settings.json.example
+.env.example
+app.py
 test
 tsconfig.json
-local.settings.json

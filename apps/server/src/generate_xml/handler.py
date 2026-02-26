@@ -1,12 +1,16 @@
 """Azure Function HTTP handler for generating MARC/MARCXML from OCLC numbers."""
 
 import json
+import logging
+import os
 from typing import Literal
 
 import azure.functions as func
 from pydantic import BaseModel, Field
 
 from src.shared import auth_token_validation, constants, oclc_service, oclc_token_manager
+
+logger = logging.getLogger(__name__)
 
 
 class GenerateXmlRequestDTO(BaseModel):
@@ -56,9 +60,13 @@ async def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
         format_type = dto.format or "marcxml"
         xml_str = svc.generate_xml(oclc_numbers=dto.books or [], format_type=format_type)
-    except Exception:
+    except Exception as e:
+        logger.exception("generate_xml: internal error")
+        body = {"error": constants.ERROR_MESSAGES["server_error"]}
+        if os.environ.get("FUNCTIONS_ENVIRONMENT") == "Development":
+            body["detail"] = str(e)
         return func.HttpResponse(
-            body=json.dumps({"error": constants.ERROR_MESSAGES["server_error"]}),
+            body=json.dumps(body),
             status_code=500,
             mimetype="application/json",
         )

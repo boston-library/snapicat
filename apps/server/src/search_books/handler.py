@@ -1,12 +1,16 @@
 """Azure Function HTTP handler for batch book search."""
 
 import json
+import logging
+import os
 from typing import Any
 
 import azure.functions as func
 
 from src.shared import auth_token_validation, constants, oclc_service, oclc_token_manager
 from src.search_books.dto_class import SearchRequestDTO
+
+logger = logging.getLogger(__name__)
 
 
 async def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -74,9 +78,13 @@ async def main(req: func.HttpRequest) -> func.HttpResponse:
             status_code=200,
             mimetype="application/json",
         )
-    except Exception:
+    except Exception as e:
+        logger.exception("search_books: internal error")
+        body = {"error": constants.ERROR_MESSAGES["server_error"]}
+        if os.environ.get("FUNCTIONS_ENVIRONMENT") == "Development":
+            body["detail"] = str(e)
         return func.HttpResponse(
-            body=json.dumps({"error": constants.ERROR_MESSAGES["server_error"]}),
+            body=json.dumps(body),
             status_code=500,
             mimetype="application/json",
         )
