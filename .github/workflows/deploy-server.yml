@@ -4,6 +4,8 @@ on:
   pull_request:
     types:
       - closed
+    paths:
+      - 'apps/server/**'
   workflow_dispatch:
     inputs:
       environment:
