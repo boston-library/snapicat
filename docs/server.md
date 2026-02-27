@@ -48,20 +48,20 @@ Then edit `apps/server/.env`. Variables match the table in `.env.example`: `OCLC
 
 ## 2. Python Version and grpcio Issues
 
-- **Use Python 3.11** (or 3.10). Do **not** use Python 3.13 or newer.
-- Many packages (especially `grpcio` and `grpcio-tools` are required by Azure Functions) do **not** yet support Python 3.13+.
+- **Use Python 3.12 only.** Do **not** use Python 3.13 or newer.
+- Many packages (especially `grpcio` and `grpcio-tools` required by Azure Functions) are **not** yet supported by Python 3.13+.
 - If you see errors like `Failed building wheel for grpcio` or `No module named 'grpc'`, you are likely using an unsupported Python version.
 
-### How to Set Up Python 3.11
+### How to Set Up Python 3.12
 
-1. Install Python 3.11:
+1. Install Python 3.12:
    ```sh
-   brew install python@3.11
+   brew install python@3.12
    ```
 2. From the repo root, create and activate a virtual environment in **`apps/server`**:
    ```sh
    cd apps/server
-   python3.11 -m venv venv
+   python3.12 -m venv venv
    source venv/bin/activate
    ```
 3. Upgrade pip and install requirements:
@@ -90,7 +90,7 @@ Then edit `apps/server/.env`. Variables match the table in `.env.example`: `OCLC
 ## 4. Common Issues and Solutions
 
 ### a. grpcio Build Errors
-- If you see errors about `grpcio` or `grpcio-tools` failing to build, make sure you are using Python 3.11 or 3.10.
+- If you see errors about `grpcio` or `grpcio-tools` failing to build, make sure you are using Python 3.12.
 - Try installing with `--force-reinstall --no-cache-dir`.
 - Make sure you have Xcode command line tools installed:
   ```sh
@@ -146,7 +146,7 @@ curl -X POST "http://localhost:8080/api/search_books" \
 | Start function host         | `func start --port 8080`                            |
 | Test endpoint               | `curl ...`                                          |
 | Set env variables           | `apps/server/local.settings.json` (not `.env`)      |
-| Use Python version          | 3.11 (or 3.10)                                      |
+| Use Python version          | 3.12                                           |
 
 ---
 
