@@ -1,3 +1,35 @@
+export const getDisplayColumnKeys = (
+	data: Record<string, unknown>[],
+	columnOrder: string[],
+): string[] => {
+	if (data.length === 0) return []
+
+	const existingColumns = new Set<string>()
+	for (const row of data) {
+		for (const k of Object.keys(row)) {
+			if (k !== 'rowId' && k !== 'id') existingColumns.add(k)
+		}
+	}
+
+	let baseKeys: string[]
+	if (columnOrder.length > 0) {
+		baseKeys = columnOrder.filter((col) => existingColumns.has(col))
+		for (const col of existingColumns) {
+			if (!baseKeys.includes(col)) baseKeys.push(col)
+		}
+	} else {
+		baseKeys = Array.from(existingColumns)
+	}
+
+	const filtered = baseKeys.filter((col) =>
+		data.some((row) => {
+			const value = row[col]
+			return value !== null && value !== undefined && String(value).trim() !== ''
+		}),
+	)
+	return filtered
+}
+
 export const sortColumns = (columns: string[], originalOrder?: string[]): string[] => {
 	// Detect if we have any of the "special" columns that affect ordering
 	const hasNewColumns = columns.some((col) => col.endsWith('_new'))
