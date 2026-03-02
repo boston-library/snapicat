@@ -6,7 +6,7 @@ import { db } from '@/lib/database'
 import { jsonToExcel } from '@/lib/excel'
 import { useGenerateXML } from '@/lib/mutations/use-generate-xml'
 import { getPageSizeFromStorage } from '@/lib/session-storage'
-import { sortColumns } from '@/lib/sort-columns'
+import { getDisplayColumnKeys, sortColumns } from '@/lib/sort-columns'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -118,20 +118,11 @@ const Processed = () => {
 
 	const handleDownload = () => {
 		try {
-			// Get all unique column keys (same logic as ProcessedDataTable)
-			const allColumnKeys = Array.from(
-				processedRecords.reduce((cols, row) => {
-					Object.keys(row).forEach((k) => {
-						if (k !== 'rowId' && k !== 'id') {
-							cols.add(k)
-						}
-					})
-					return cols
-				}, new Set<string>()),
-			) as string[]
-
-			// Use the exact same sorting logic as ProcessedDataTable
-			const sortedColumns = sortColumns(allColumnKeys, allColumnKeys)
+			const displayColumnKeys = getDisplayColumnKeys(processedRecords, columnOrder)
+			const sortedColumns = sortColumns(
+				displayColumnKeys,
+				columnOrder.length > 0 ? columnOrder : displayColumnKeys,
+			)
 
 			// Create filtered data with sorted columns (only the columns that are displayed)
 			const filteredData = processedRecords.map((row) => {
