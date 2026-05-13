@@ -31,7 +31,7 @@ const Login = () => {
 						<h1 className='text-3xl font-bold tracking-tight text-gray-900 dark:text-white'>
 							{appName}
 						</h1>
-						<h2 className='text-xl font-semibold text-gray-700 dark:text-gray-300'>OCLC App</h2>
+						<h2 className='text-xl font-semibold text-gray-700 dark:text-gray-300'>OCLC WorldCat Metadata API Bulk Processing Application</h2>
 						<p className='text-sm text-gray-600 dark:text-gray-400'>
 							Sign in to access your library data management tools
 						</p>
