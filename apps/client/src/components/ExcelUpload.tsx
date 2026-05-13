@@ -22,7 +22,6 @@ interface ExcelUploadProps {
 	orderby: string
 	setOrderby: (orderby: string) => void
 	orderByOptions: { label: string; value: string }[]
-	targetTable: 'adv_unprocessed'
 }
 
 const ExcelUpload = ({
@@ -31,7 +30,6 @@ const ExcelUpload = ({
 	orderby,
 	setOrderby,
 	orderByOptions,
-	targetTable = 'adv_unprocessed',
 }: ExcelUploadProps) => {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 	const [uploading, setUploading] = useState(false)

@@ -4,6 +4,18 @@ on:
   pull_request:
     types:
       - closed
+    paths:
+      - 'apps/server/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'server-develop'
+        type: choice
+        options:
+          - server-develop
+          - server-production
 
 permissions:
   id-token: write
@@ -11,13 +23,13 @@ permissions:
 
 env:
   NODE_VERSION: 20.x
-  PYTHON_VERSION: 3.11
-  PROJECT_ROOT: apps/server #
+  PYTHON_VERSION: 3.12
+  PROJECT_ROOT: apps/server
   ARTIFACT_NAME: drop
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
     name: Build Function App
 
@@ -46,14 +58,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: apps/server/functionapp.zip #
+          path: apps/server/functionapp.zip
 
   deploy:
-    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main'))
     needs: build
     runs-on: ubuntu-latest
     name: Deploy to Azure Function App
-    environment: ${{ github.event.pull_request.base.ref == 'main' && 'production' || 'develop' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.event.pull_request.base.ref == 'main' && 'server-production' || 'server-develop') }}
 
     steps:
       - name: Download build artifact

@@ -4,15 +4,27 @@ on:
   pull_request:
     types:
       - closed
+    paths:
+      - 'apps/client/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'client-develop'
+        type: choice
+        options:
+          - client-develop
+          - client-production
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
-    environment: ${{ github.event.pull_request.base.ref == 'main' && 'production' || 'develop' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.event.pull_request.base.ref == 'main' && 'client-production' || 'client-develop') }}
     env:
       NODE_VERSION: 20.x
 

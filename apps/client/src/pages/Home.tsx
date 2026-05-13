@@ -28,7 +28,7 @@ import {
 	getPageSizeFromStorage,
 	saveLastPageOnHome,
 } from '@/lib/session-storage'
-import { sortColumns } from '@/lib/sort-columns'
+import { getDisplayColumnKeys, sortColumns } from '@/lib/sort-columns'
 import type { RowSelectionState } from '@tanstack/react-table'
 import { CheckCircle, Clock, RefreshCw, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -422,18 +422,11 @@ const Home = () => {
 
 	const handleDownload = () => {
 		try {
-			const allColumnKeys = Array.from(
-				uploadedData.reduce((cols, row) => {
-					Object.keys(row).forEach((k) => {
-						if (k !== 'rowId' && k !== 'id' && k !== 'error') {
-							cols.add(k)
-						}
-					})
-					return cols
-				}, new Set<string>()),
-			) as string[]
-
-			const sortedColumns = sortColumns(allColumnKeys, allColumnKeys)
+			const displayColumnKeys = getDisplayColumnKeys(uploadedData, columnOrder)
+			const sortedColumns = sortColumns(
+				displayColumnKeys,
+				columnOrder.length > 0 ? columnOrder : displayColumnKeys,
+			)
 
 			// Create filtered data with sorted columns
 			const filteredData = uploadedData.map((row) => {
@@ -1139,7 +1132,6 @@ const Home = () => {
 					orderby={orderby}
 					setOrderby={setOrderby}
 					orderByOptions={orderByOptions}
-					targetTable='adv_unprocessed'
 				/>
 			)}
 

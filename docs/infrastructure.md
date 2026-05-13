@@ -60,7 +60,7 @@ The server runs the Python backend (OCLC search and XML generation). On Azure it
 **Step-by-step (Azure):**
 
 1. **Function App**  
-   Create an Azure Function App (e.g. name `<AZURE_FUNCTION_APP_NAME>`), runtime **Python** (e.g. 3.11 or 3.10, kindly don't use 3.13 or greater, cause we use some packages like `grpcio` and `grpcio-tools` that are yet to be supported on 3.13 or greater). The deployment pipeline (or manual zip deploy) uploads the contents of `apps/server` (excluding `local.settings.json` and dev artifacts).
+   Create an Azure Function App (e.g. name `<AZURE_FUNCTION_APP_NAME>`), runtime **Python 3.12**. Do **not** use 3.13 or greater (we use packages like `grpcio` and `grpcio-tools` that have compatibility issues on other versions). The deployment pipeline (or manual zip deploy) uploads the contents of `apps/server` (excluding `local.settings.json` and dev artifacts).
 
 2. **Application settings**  
    In the Function App, **Configuration → Application settings**, add at least:
@@ -117,7 +117,7 @@ Apply these optimizations only in the Azure environments where you need the extr
 
 ### 2.2 Alternate Hosting
 
-You can run the server on **any host that can run Python 3.11+**:
+You can run the server on **any host that can run Python 3.12**:
 
 - **Standalone FastAPI (recommended for non-Azure):** The repo includes `apps/server/app.py`, which runs the same API logic as the Azure Functions. Install dependencies with `pip install -r apps/server/requirements.txt`, set environment variables (see `apps/server/.env.example`: `OCLC_WSKEY`, `OCLC_SECRET`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `CORS_ORIGINS`, `HOST`, `PORT`), then run e.g. `uvicorn app:app --host 0.0.0.0 --port 8080`. See [Server](./server.md) for details.
 - **Docker:** Build an image that installs dependencies and runs `uvicorn app:app` (or `gunicorn` + uvicorn workers). Pass the same env vars via your orchestration (e.g. Docker env, Kubernetes secrets).

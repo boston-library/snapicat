@@ -92,7 +92,7 @@ Set these per environment (develop vs production) if you use separate Storage ac
 
 **Build job:**
 
-1. Checkout repo, set up Python (e.g. 3.11).
+1. Checkout repo, set up Python 3.12.
 2. Install dependencies from **`apps/server/requirements.txt`** into the runner and into **`apps/server/.python_packages/lib/site-packages`** so they are included in the zip.
 3. From **`apps/server`**, create **`functionapp.zip`** (excludes `.git`, `.vscode`, `__pycache__`, `*.pyc`, `local.settings.json`).
 4. Upload the zip as a workflow artifact.
