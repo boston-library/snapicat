@@ -67,7 +67,7 @@ Configure **develop** and **production** environments in the repo (Settings → 
 
 **GitHub configuration (client):**
 
-- **Federated credential (OIDC):** In **Azure Portal → Microsoft Entra ID → App registrations**, create an app (or use an existing one) for GitHub. Add a **federated credential** so GitHub Actions can request a token for your Azure subscription (subject: repo and optionally branch/environment). Note the app’s **Application (client) ID**, **Directory (tenant) ID**, and your **Subscription ID**.
+- **Federated credential (OIDC):** Create the Entra ID app registration, federated credential, and Azure RBAC assignment as in [Infrastructure — GitHub Actions and Azure (OIDC)](./infrastructure.md#4-github-actions-and-azure-oidc). You need this app’s **Application (client) ID**, plus **Directory (tenant) ID** and **Subscription ID** for the workflows.
 - **Environment variables and secrets** for the client workflow:
 
 | Name | Type | Purpose |
@@ -82,7 +82,7 @@ Configure **develop** and **production** environments in the repo (Settings → 
 | `AZURE_BE_APP_CLIENT_ID` | Variable | Backend Entra app client ID → `VITE_AZURE_BE_APP_CLIENT_ID`. |
 | `AZURE_GITHUB_APP_CLIENT_ID` | Variable | OIDC: client ID of the Entra app used for the GitHub federated credential. |
 | `AZURE_SUBSCRIPTION_ID` | Variable | OIDC: Azure subscription ID. |
-| `API_CODE` | Secret | Optional; injected as `VITE_API_CODE` if your backend uses it. |
+| `API_CODE` | Secret | Optional. When set, injected as **`VITE_API_CODE`** so the built client sends `?code=...` on API requests (matches Azure Functions **`AuthLevel.FUNCTION`**). Get the value from **Azure Portal → your Function App → App keys → Host keys → default** (or a function-specific key); store it only in GitHub. See [Infrastructure — Server hosting (function key)](./infrastructure.md#21-microsoft-azure). |
 
 Set these per environment (develop vs production) if you use separate Storage accounts or API URLs per environment.
 
@@ -116,7 +116,7 @@ Application settings (OCLC keys, Entra client/tenant IDs) are **not** in the zip
 
 ### 1.4 Post-deployment and one-time setup (Azure)
 
-- **Azure resources:** Ensure you have a Storage Account (static website enabled) and a Function App (Python runtime). See [Infrastructure](./infrastructure.md#1-client-hosting-static-website) and [Infrastructure](./infrastructure.md#2-server-hosting-api).
+- **Azure resources:** Ensure you have a Storage Account with static website hosting and a Function App on Python 3.12. For Storage and Front Door/custom domain, see [Infrastructure — Client hosting](./infrastructure.md#1-client-hosting-static-website). For the Function App, app settings, CORS, and the HTTP **function key** used as `API_CODE`, see [Infrastructure — Server hosting (API)](./infrastructure.md#2-server-hosting-api).
 - **Custom domain and CORS:** If you use a custom domain for the client (e.g. `https://snapicat.yourdomain.org`):
   1. **Client:** In the Storage Account, complete Front Door/CDN and domain association and DNS CNAME as in [Infrastructure](./infrastructure.md#11-microsoft-azure).
   2. **Server:** In the Function App, **API → CORS**, add the client origin(s) (e.g. `https://snapicat.yourdomain.org`).
@@ -157,4 +157,4 @@ If you are **not** using Microsoft Azure or GitHub Actions, you can still build 
 |------|----------------------------------|----------------------|
 | **Client** | Workflow builds `apps/client`, uploads to Storage `$web`; vars from GitHub env/secrets | Build locally or in your CI; upload `apps/client/dist` to your static host; set `VITE_*` at build time |
 | **Server** | Workflow zips `apps/server`, deploys to Function App via OIDC; app settings in Azure | Run `app.py` (FastAPI) on your host; set env vars; deploy via your CI or manually |
-| **Docs** | [Infrastructure – Microsoft Azure](./infrastructure.md#1-client-hosting-static-website), [Infrastructure – Entra](./infrastructure.md#31-microsoft-azure-entra-id) | [Infrastructure – Alternate Hosting](./infrastructure.md#12-alternate-hosting), [Infrastructure – Alternate server](./infrastructure.md#22-alternate-hosting) |
+| **Docs** | [Infrastructure — client](./infrastructure.md#1-client-hosting-static-website), [Infrastructure — server](./infrastructure.md#2-server-hosting-api), [Infrastructure — Entra](./infrastructure.md#31-microsoft-azure-entra-id), [Infrastructure — GitHub OIDC](./infrastructure.md#4-github-actions-and-azure-oidc) | [Infrastructure — Alternate Hosting](./infrastructure.md#12-alternate-hosting), [Infrastructure — Alternate server](./infrastructure.md#22-alternate-hosting) |
