@@ -2,7 +2,7 @@
 
 This document describes hosting and identity for snAPIcat. For **each part of the setup** we provide:
 
-- **Microsoft Azure** — Step-by-step guidance for running the app on Azure (Storage, Front Door, Function App, Entra ID), using placeholders and environment variables instead of organization-specific names.
+- **Microsoft Azure** — Step-by-step guidance for running the app on Azure (Storage, Front Door, Function App, Entra ID, GitHub Actions federated OIDC), using placeholders and environment variables instead of organization-specific names.
 - **Alternate Hosting** — Basic guidance for using the code on other platforms (non-Azure, non–GitHub Actions).
 
 Use the Azure sections if you are on Azure; use the Alternate Hosting sections if you prefer a different provider or self-hosting.
@@ -72,6 +72,10 @@ The server runs the Python backend (OCLC search and XML generation). On Azure it
 
 3. **CORS**  
    In the Function App, open **API → CORS**. Add the **exact** origin(s) of your client (e.g. `https://snapicat.yourdomain.org` or your Storage static website URL). Use `https://` and no trailing slash as required by Azure.
+
+4. **Function key for HTTP `code` (optional but typical for this repo)**  
+   The Azure Functions host registers HTTP routes with **function**-level authorization (`AuthLevel.FUNCTION` in `function_app.py`). Each request must include a valid key in the query string as `?code=...` (the client adds this when `VITE_API_CODE` is set at build time; see [client](./client.md)).  
+   In the Azure portal, open your **Function App** → **App keys** (under **Functions** in the portal navigation, naming may vary slightly by portal version) → **Host keys** → copy the **default** key. That value is what you store in GitHub as the **`API_CODE`** secret for the client deploy workflow so the static build can call the API ([Deployment](./deployment.md#12-client-deployment-azure-storage-static-website)).
 
 ### 2.1.1 Azure Function performance optimization (vNet + memory)
 
@@ -155,22 +159,46 @@ This is not documented step-by-step here; treat it as a code-level change rather
 
 ---
 
-## 4. How the pieces connect
+## 4. GitHub Actions and Azure (OIDC)
+
+Deployments from **GitHub Actions** use **OpenID Connect (OIDC)** to sign in to Azure so you do **not** store long-lived Azure client secrets in GitHub. That requires a dedicated **Microsoft Entra ID app registration** for GitHub (what older runbooks often call the “GitHub Actions app” for Azure).
+
+**Step-by-step (Entra ID + Azure RBAC):**
+
+1. **App registration for GitHub**  
+   In **Microsoft Entra ID → App registrations → New registration**, create an application (for example “snAPIcat GitHub Actions”). You do **not** need a client secret for OIDC federation.
+
+2. **Federated credential**  
+   In that app registration, open **Certificates & secrets → Federated credentials → Add credential**. Choose **GitHub Actions deploying Azure resources**. Set **Organization**, **Repository**, and (**recommended**) qualify by **Environment** (for example `client-develop`) or by branch pattern so issued tokens are scoped. Add additional credentials if you use separate environments or repos.
+
+3. **Azure RBAC**  
+   In your **subscription** or **resource group** (the one that holds your Storage account and Function App), open **Access control (IAM) → Add role assignment**. Assign a role such as **Contributor** to this app registration’s **enterprise application** (service principal)—search by the display name you used in step 1.
+
+4. **Values for GitHub**  
+   Copy the app registration **Application (client) ID** into the GitHub environment variable **`AZURE_GITHUB_APP_CLIENT_ID`**. Use your **Directory (tenant) ID** and **Subscription ID** as described in [Client Deployment](./deployment.md#12-client-deployment-azure-storage-static-website) and the server workflow table in [Server Deployment](./deployment.md#13-server-deployment-azure-function-app).
+
+This replaces legacy setups that created a separate “application” solely so GitHub could deploy to Azure: the workload identity lives in **Entra ID**, and Azure RBAC grants it access to your resources.
+
+---
+
+## 5. How the pieces connect
 
 - **Browser** loads the client from your chosen host (Azure Storage/Front Door or alternate static host) and runs the React app. MSAL redirects the user to Entra ID for sign-in.
 - **Login:** After sign-in, the user is sent back to the client’s redirect URI. The client acquires an access token for the backend API scope (`api://<backend-client-id>/.default`).
-- **API calls:** The client sends `Authorization: Bearer <token>` to the server (Azure Function App or alternate host). The server validates the JWT using Entra ID’s JWKS, then runs the business logic (OCLC search, XML generation).
+- **API calls:** The client sends `Authorization: Bearer <token>` to the server (Azure Function App or alternate host). The server validates the JWT using Entra ID’s JWKS, then runs the business logic (OCLC search, XML generation). On **Azure Functions**, HTTP routes also use **function**-level keys: when the client is built with **`VITE_API_CODE`**, requests include `?code=...` using the **default** host key or another key from the Function App (**App keys** in the portal)—see [Server hosting (Azure)](./infrastructure.md#21-microsoft-azure).
 - **OCLC:** The server uses `OCLC_WSKEY` and `OCLC_SECRET` to obtain and use OCLC API tokens; this is independent of the user’s Entra token.
 
 If you use **Alternate Hosting**, the client URL and API URL are whatever you configured; CORS and redirect URIs must match those URLs.
 
 ---
 
-## 5. Summary checklist
+## 6. Summary checklist
 
 | Item | Microsoft Azure | Alternate Hosting |
 |------|-----------------|-------------------|
 | **Client** | Storage Account static website (`$web`); optional Front Door + custom domain | Any static host (Netlify, Vercel, S3+CloudFront, nginx); build from `apps/client`, set `VITE_*` at build time |
 | **Server** | Azure Function App; app settings; CORS in portal | Run `app.py` (FastAPI) on VPS, Docker, Railway, etc.; set env vars and CORS |
-| **Identity** | Entra ID: two app registrations, redirect URIs, app roles, backend scope | Entra ID supported as-is; other IdPs require code changes |
+| **Identity** | Entra ID: two app registrations (SPA + API), redirect URIs, app roles, backend scope | Entra ID supported as-is; other IdPs require code changes |
+| **GitHub Actions → Azure** | Entra ID app + federated credential + RBAC; see [GitHub Actions and Azure (OIDC)](./infrastructure.md#4-github-actions-and-azure-oidc) | N/A unless you use similar OIDC from another CI |
+| **HTTP function key (`?code=`)** | **Default** host key (or per-function key) from Function App **App keys**; GitHub **`API_CODE`** for client builds — [Server hosting (Azure)](./infrastructure.md#21-microsoft-azure) | Set `VITE_API_CODE` only if your API expects the same pattern |
 | **OCLC** | Function App application settings | Server env vars (`OCLC_WSKEY`, `OCLC_SECRET`) |
